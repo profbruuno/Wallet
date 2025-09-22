@@ -1,4 +1,4 @@
-/(async () => {
+(async () => {
   // State management
   let solanaWeb3 = null;
   let connection = null;
@@ -291,6 +291,186 @@
       solBalanceEl.textContent = `${solBalance.toFixed(6)} SOL`;
     } catch (e) {
       console.error(e);
+      setStatus("Error updating balance: " + e.message, true);
+    }
+  }
+  
+  // Update tokens list with retry logic
+  async function updateTokens() {
+    if (!connection || !wallet || !solanaWeb3) return;
+    
+    try {
+      setStatus("Loading tokens...");
+      
+      const { PublicKey } = solanaWeb3;
+      const TOKEN_PROGRAM_ID = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+      
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("Token fetch timeout")), 15000);
+      });
+      
+      const tokenPromise = connection.getParsedTokenAccountsByOwner(wallet.publicKey, {
+        programId: TOKEN_PROGRAM_ID
+      });
+      
+      const resp = await Promise.race([tokenPromise, timeoutPromise]);
+      
+      tokens = [];
+      for (const { account } of resp.value) {
+        const info = account.data.parsed.info;
+        const uiAmount = info.tokenAmount.uiAmount;
+        
+        if (uiAmount && uiAmount > 0) {
+          // Get token metadata
+          const metadata = await getTokenMetadata(info.mint);
+          
+          tokens.push({
+            mint: info.mint,
+            amount: info.tokenAmount.uiAmountString,
+            symbol: metadata.symbol || (info.mint.slice(0, 4) + '...' + info.mint.slice(-4)),
+            name: metadata.name || 'Unknown Token'
+          });
+        }
+      }
+      
+      // Add imported tokens even if balance is 0
+      for (const tokenAddress of importedTokens) {
+        if (!tokens.some(t => t.mint === tokenAddress)) {
+          const metadata = await getTokenMetadata(tokenAddress);
+          tokens.push({
+            mint: tokenAddress,
+            amount: '0',
+            symbol: metadata.symbol || (tokenAddress.slice(0, 4) + '...' + tokenAddress.slice(-4)),
+            name: metadata.name || 'Unknown Token'
+          });
+        }
+      }
+      
+      renderTokens();
+      setStatus("Tokens updated successfully");
+    } catch (e) {
+      console.error(e);
+      setStatus("Error updating tokens: " + e.message + ". Please try again or check your network connection.", true);
+    }
+  }
+  
+  // Render tokens to UI
+  function renderTokens() {
+    tokensContainerEl.innerHTML = '';
+    
+    if (tokens.length === 0) {
+      tokensContainerEl.innerHTML = '<div class="muted">No tokens found</div>';
+      return;
+    }
+    
+    tokens.forEach(token => {
+      const tokenEl = document.createElement('div');
+      tokenEl.className = 'token-card';
+      tokenEl.innerHTML = `
+        <div class="token-symbol">${token.symbol}</div>
+        <div class="token-name">${token.name}</div>
+        <div class="token-balance">${token.amount}</div>
+        <div class="token-mint">${token.mint}</div>
+      `;
+      tokensContainerEl.appendChild(tokenEl);
+    });
+  }
+  
+  // Import token by contract address
+  async function importToken(tokenAddress) {
+    if (!tokenAddress) return;
+    
+    try {
+      const { PublicKey } = solanaWeb3;
+      // Validate the address
+      new PublicKey(tokenAddress);
+      
+      if (!importedTokens.includes(tokenAddress)) {
+        importedTokens.push(tokenAddress);
+        localStorage.setItem('importedTokens', JSON.stringify(importedTokens));
+      }
+      
+      setStatus("Token imported successfully");
+      updateTokens();
+    } catch (e) {
+      console.error(e);
+      setStatus("Invalid token address: " + e.message, true);
+    }
+  }
+  
+  // Save network selection
+  function saveNetwork() {
+    const selectedNetwork = document.querySelector('input[name="network"]:checked').value;
+    
+    if (selectedNetwork !== currentNetwork) {
+      currentNetwork = selectedNetwork;
+      localStorage.setItem('network', currentNetwork);
+      networkStatusEl.textContent = `Network changed to ${currentNetwork}.`;
+      
+      // Reinitialize connection
+      initConnection();
+    } else {
+      networkStatusEl.textContent = 'Network unchanged.';
+    }
+  }
+  
+  // Event listeners
+  btnGen.addEventListener("click", () => {
+    try {
+      const kp = nacl.sign.keyPair();
+      secretOut.textContent = bs58.encode(kp.secretKey);
+      setStatus("Secret key generated");
+    } catch (e) {
+      console.error(e);
+      setStatus("Generation failed: " + e.message, true);
+    }
+  });
+  
+  btnImport.addEventListener("click", () => {
+    try {
+      const secretBytes = parseSecret(secretIn.value);
+      setWallet(secretBytes);
+    } catch (e) {
+      console.error(e);
+      setStatus("Error: " + e.message, true);
+    }
+  });
+  
+  importTokenBtn.addEventListener("click", () => {
+    importToken(tokenAddressInput.value.trim());
+    tokenAddressInput.value = '';
+  });
+  
+  saveNetworkBtn.addEventListener("click", saveNetwork);
+  
+  refreshTokensBtn.addEventListener("click", updateTokens);
+  
+  // Initialize
+  document.addEventListener('DOMContentLoaded', () => {
+    // Check for saved wallet
+    const savedSecretKey = localStorage.getItem('secretKey');
+    if (savedSecretKey) {
+      try {
+        const secretBytes = bs58.decode(savedSecretKey);
+        setWallet(secretBytes);
+        secretIn.value = savedSecretKey;
+      } catch (e) {
+        console.error("Error loading saved wallet:", e);
+        localStorage.removeItem('secretKey');
+      }
+    }
+    
+    // Set solanaWeb3
+    solanaWeb3 = window.solanaWeb3;
+    if (solanaWeb3) {
+      setStatus("Libraries loaded — ready");
+      initConnection();
+    } else {
+      setStatus("Error loading Solana library", true);
+    }
+  });
+})();onsole.error(e);
       setStatus("Error updating balance: " + e.message, true);
     }
   }
