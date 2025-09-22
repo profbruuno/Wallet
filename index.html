@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Solana Wallet</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-container">
+    <header>
+      <div class="logo">Solana Wallet</div>
+      <div class="menu">
+        <button class="menu-button active" data-page="home">Home</button>
+        <button class="menu-button" data-page="settings">Settings</button>
+      </div>
+    </header>
+    
+    <main>
+      <!-- Home Page -->
+      <section id="home-page" class="page active">
+        <div class="card">
+          <h2>Wallet Overview</h2>
+          <div class="wallet-info">
+            <span>Connected:</span>
+            <div class="wallet-address-container">
+              <span id="wallet-address" class="wallet-address">Not connected</span>
+            </div>
+          </div>
+          
+          <div class="network-info">
+            <span>Network:</span>
+            <span id="current-network" class="network-badge">Not selected</span>
+          </div>
+          
+          <h3>SOL Balance</h3>
+          <div id="sol-balance" class="balance-large">0 SOL</div>
+        </div>
+        
+        <div class="card">
+          <div class="tokens-header">
+            <h2>Tokens</h2>
+            <button id="btn-refresh-tokens">Refresh Tokens</button>
+          </div>
+          <div id="tokens-container" class="token-grid">
+            <div class="muted">No tokens found</div>
+          </div>
+          
+          <div class="divider"></div>
+          
+          <h3>Import Token</h3>
+          <p class="muted">Enter a token contract address to import it to your wallet</p>
+          <div class="add-token-form">
+            <input type="text" id="token-address-input" placeholder="Token contract address" />
+            <button id="btn-import-token">Import</button>
+          </div>
+        </div>
+      </section>
+      
+      <!-- Settings Page -->
+      <section id="settings-page" class="page">
+        <div class="card">
+          <h2>Network Selection</h2>
+          <div class="network-selector">
+            <label>
+              <input type="radio" name="network" value="devnet" checked>
+              Devnet (Testnet)
+            </label>
+            <label>
+              <input type="radio" name="network" value="mainnet">
+              Mainnet (Real SOL)
+            </label>
+          </div>
+          <button id="btn-save-network">Save Network</button>
+          <div id="network-status" class="muted"></div>
+        </div>
+        
+        <div class="card">
+          <h2>Generate Secret Key</h2>
+          <button id="btn-gen">Generate New Key</button>
+          <pre id="secret-out" class="mono"></pre>
+          <div class="muted">
+            Keep this secret key offline and private. Anyone with it can move your funds.
+          </div>
+        </div>
+        
+        <div class="card">
+          <h2>Import Secret Key</h2>
+          <textarea
+            id="secret-in"
+            class="mono"
+            placeholder="Paste base58 secret key or JSON array of 64 numbers"
+          ></textarea>
+          <button id="btn-import">Import Key</button>
+          
+          <div class="divider"></div>
+          
+          <h3>Current Wallet Address</h3>
+          <pre id="address-out" class="mono">Not set</pre>
+        </div>
+      </section>
+    </main>
+    
+    <div id="status" class="status muted">Initializing…</div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/tweetnacl@1.0.3/nacl-fast.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
